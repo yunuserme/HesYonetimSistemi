@@ -13,7 +13,7 @@ Santral yönetimini daha verimli hale getirmek için sistemimiz üç ana hedef �
 
 ## 3. Takım Üyeleri
 Bu proje, **Yazılım Mühendisliği Grup 2026/2028** tarafından geliştirilmektedir.  
-Takımımız: Semanur İmre, Emirhan Kırmızıoğlan, Elif Kara, Tunahan Kum, Eren Bozak, Esma Eren, Ahmet Amat, Yasir Kara, Yunus Emre Ekiz. 
+Takımımız: Semanur İmre, İsmihan Kırmızıoğlan, Elif Kara, Tunahan Işkın, Eren Bezek, Esma Bilen, Achmet Amet, Yasir Kara, Yunus Emre Erkuş. 
 
 ## 4. Takım Üyelerinin Yetkinlikleri ve Görev Dağılımı
 Sistemde yetki karmaşasının önüne geçmek için herkes yalnızca kendi rolüne uygun ekranları ve verileri görür: 

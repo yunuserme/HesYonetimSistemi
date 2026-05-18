@@ -1,43 +1,65 @@
-from pydantic import BaseModel
-from datetime import datetime
-from typing import Optional
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import Numeric
+from sqlalchemy import ForeignKey
+from sqlalchemy import TIMESTAMP
+
+from sqlalchemy.sql import func
+
+from sqlalchemy.orm import relationship
+
+from app.database.database import Base
 
 
-# ─────────────────────────────────────────────
-# CREATE
-# ─────────────────────────────────────────────
+class Sensor(Base):
 
-class SensorCreate(BaseModel):
+    __tablename__ = "sensors"
 
-    sensor_name: str
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
-    sensor_type: str
+    sensor_name = Column(
+        String,
+        nullable=False,
+        unique=True
+    )
 
-    turbine_id: int
+    sensor_type = Column(
+        String,
+        nullable=False
+    )
 
-    current_value: Optional[float] = 0
+    turbine_id = Column(
+        Integer,
+        ForeignKey("turbines.id"),
+        nullable=False
+    )
 
+    current_value = Column(
+        Numeric,
+        default=0
+    )
 
-# ─────────────────────────────────────────────
-# RESPONSE
-# ─────────────────────────────────────────────
+    status = Column(
+        String,
+        default="ACTIVE"
+    )
 
-class SensorResponse(BaseModel):
+    last_signal_time = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True
+    )
 
-    id: int
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now()
+    )
 
-    sensor_name: str
-
-    sensor_type: str
-
-    turbine_id: int
-
-    current_value: float
-
-    status: str
-
-    created_at: datetime
-
-    model_config = {
-        "from_attributes": True
-    }
+    turbine = relationship(
+        "Turbine",
+        back_populates="sensors"
+    )

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>HES SCADA PANELİ</title>
+
+  <!-- TAILWIND -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FONT AWESOME -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  />
+
+  <style>
+    body {
+      background: #020617;
+      overflow-x: hidden;
+    }
+
+    .glass {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(10px);
+    }
+
+    .card-hover {
+      transition: 0.3s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-5px);
+    }
+
+    .critical-blink {
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .progress-bg {
+      width: 100%;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+  </style>
+</head>
+
+<body class="text-white min-h-screen">
+
+  <div class="flex">
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 min-h-screen bg-[#061120] border-r border-cyan-900 p-6 hidden lg:flex flex-col">
+
+      <div>
+        <h1 class="text-4xl font-black text-cyan-400">
+          HES SCADA
+        </h1>
+
+        <p class="text-slate-400 mt-2">
+          Kontrol Sistemi
+        </p>
+      </div>
+
+      <!-- MENU -->
+      <nav class="mt-12 space-y-4">
+
+        <button class="w-full bg-cyan-600 hover:bg-cyan-700 transition-all p-4 rounded-2xl text-left font-bold">
+          <i class="fa-solid fa-house mr-3"></i>
+          Ana Sayfa
+        </button>
+
+        <button class="w-full hover:bg-slate-800 transition-all p-4 rounded-2xl text-left">
+          <i class="fa-solid fa-fan mr-3"></i>
+          Türbinler
+        </button>
+
+        <button class="w-full hover:bg-slate-800 transition-all p-4 rounded-2xl text-left">
+          <i class="fa-solid fa-triangle-exclamation mr-3"></i>
+          Alarm Listesi
+        </button>
+
+        <button class="w-full hover:bg-slate-800 transition-all p-4 rounded-2xl text-left">
+          <i class="fa-solid fa-water mr-3"></i>
+          Savak Kapakları
+        </button>
+
+      </nav>
+
+      <!-- STATUS -->
+      <div class="mt-auto">
+
+        <div class="bg-green-950 border border-green-700 rounded-2xl p-4 flex items-center gap-3">
+
+          <div class="w-4 h-4 bg-green-400 rounded-full animate-pulse"></div>
+
+          <span class="text-green-400 font-bold">
+            Sistem Online
+          </span>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 p-6 lg:p-10">
+
+      <!-- HEADER -->
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 mb-10">
+
+        <div>
+          <h1 class="text-5xl font-black text-cyan-400">
+            HES SCADA PANELİ
+          </h1>
+
+          <p class="text-slate-400 mt-2 text-lg">
+            Hidroelektrik Santral İzleme Sistemi
+          </p>
+        </div>
+
+        <div class="glass border border-cyan-700 rounded-2xl px-6 py-4">
+          <i class="fa-solid fa-clock text-cyan-400 mr-2"></i>
+          17 Mayıs 2025 - 11:48
+        </div>
+
+      </div>
+
+      <!-- TOP SUMMARY -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+
+        <!-- CARD -->
+        <div class="glass border border-green-700 rounded-3xl p-6 card-hover">
+
+          <div class="flex justify-between items-center">
+
+            <div>
+              <p class="text-slate-400 text-sm">
+                TOPLAM ÜRETİM
+              </p>
+
+              <h2 class="text-5xl font-black text-green-400 mt-3">
+                113 MW
+              </h2>
+            </div>
+
+            <i class="fa-solid fa-bolt text-5xl text-green-400"></i>
+
+          </div>
+
+        </div>
+
+        <!-- CARD -->
+        <div class="glass border border-cyan-700 rounded-3xl p-6 card-hover">
+
+          <div class="flex justify-between items-center">
+
+            <div>
+              <p class="text-slate-400 text-sm">
+                AKTİF TÜRBİN
+              </p>
+
+              <h2 class="text-5xl font-black text-cyan-400 mt-3">
+                3
+              </h2>
+            </div>
+
+            <i class="fa-solid fa-fan text-5xl text-cyan-400"></i>
+
+          </div>
+
+        </div>
+
+        <!-- CARD -->
+        <div class="glass border border-yellow-500 rounded-3xl p-6 card-hover">
+
+          <div class="flex justify-between items-center">
+
+            <div>
+              <p class="text-slate-400 text-sm">
+                WARNING
+              </p>
+
+              <h2 class="text-5xl font-black text-yellow-400 mt-3">
+                1
+              </h2>
+            </div>
+
+            <i class="fa-solid fa-triangle-exclamation text-5xl text-yellow-400"></i>
+
+          </div>
+
+        </div>
+
+        <!-- CARD -->
+        <div class="glass border border-red-700 rounded-3xl p-6 card-hover">
+
+          <div class="flex justify-between items-center">
+
+            <div>
+              <p class="text-slate-400 text-sm">
+                KRİTİK ALARM
+              </p>
+
+              <h2 class="text-5xl font-black text-red-500 mt-3 critical-blink">
+                1
+              </h2>
+            </div>
+
+            <i class="fa-solid fa-bell text-5xl text-red-500"></i>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TURBINES -->
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+        <!-- TURBINE -->
+        <div class="glass border border-green-700 rounded-3xl p-7 card-hover">
+
+          <div class="flex justify-between items-center mb-6">
+
+            <h2 class="text-3xl font-black">
+              Türbin 1
+            </h2>
+
+            <span class="bg-green-600 px-4 py-1 rounded-full font-bold">
+              NORMAL
+            </span>
+
+          </div>
+
+          <!-- WATER -->
+          <div class="mb-6">
+
+            <div class="flex justify-between mb-2">
+
+              <span class="text-slate-300">
+                Su Seviyesi
+              </span>
+
+              <span class="text-green-400 font-bold">
+                %72
+              </span>
+
+            </div>
+
+            <div class="progress-bg">
+              <div class="progress-fill bg-green-500 w-[72%]"></div>
+            </div>
+
+          </div>
+
+          <div class="space-y-4">
+
+            <div class="flex justify-between">
+              <span>Sıcaklık</span>
+              <span class="text-cyan-400 font-bold">55°C</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>RPM</span>
+              <span class="text-cyan-400 font-bold">1450</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>Üretim</span>
+              <span class="text-green-400 font-bold">32 MW</span>
+            </div>
+
+          </div>
+
+          <button class="w-full mt-8 bg-red-600 hover:bg-red-700 transition-all py-4 rounded-2xl font-black">
+            ACİL DURDUR
+          </button>
+
+        </div>
+
+        <!-- TURBINE -->
+        <div class="glass border border-red-700 rounded-3xl p-7 card-hover">
+
+          <div class="flex justify-between items-center mb-6">
+
+            <h2 class="text-3xl font-black">
+              Türbin 2
+            </h2>
+
+            <span class="bg-red-600 px-4 py-1 rounded-full font-bold critical-blink">
+              KRİTİK
+            </span>
+
+          </div>
+
+          <!-- WATER -->
+          <div class="mb-6">
+
+            <div class="flex justify-between mb-2">
+
+              <span class="text-slate-300">
+                Su Seviyesi
+              </span>
+
+              <span class="text-red-400 font-bold">
+                %92
+              </span>
+
+            </div>
+
+            <div class="progress-bg">
+              <div class="progress-fill bg-red-500 w-[92%]"></div>
+            </div>
+
+          </div>
+
+          <div class="space-y-4">
+
+            <div class="flex justify-between">
+              <span>Sıcaklık</span>
+              <span class="text-red-400 font-bold">89°C</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>RPM</span>
+              <span class="text-red-400 font-bold">1700</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>Üretim</span>
+              <span class="text-red-400 font-bold">44 MW</span>
+            </div>
+
+          </div>
+
+          <div class="bg-red-950 border border-red-500 mt-6 p-4 rounded-2xl text-center critical-blink">
+            KRİTİK ALARM AKTİF
+          </div>
+
+          <button class="w-full mt-8 bg-red-600 hover:bg-red-700 transition-all py-4 rounded-2xl font-black">
+            ACİL DURDUR
+          </button>
+
+        </div>
+
+        <!-- TURBINE -->
+        <div class="glass border border-yellow-500 rounded-3xl p-7 card-hover">
+
+          <div class="flex justify-between items-center mb-6">
+
+            <h2 class="text-3xl font-black">
+              Türbin 3
+            </h2>
+
+            <span class="bg-yellow-500 text-black px-4 py-1 rounded-full font-bold">
+              WARNING
+            </span>
+
+          </div>
+
+          <!-- WATER -->
+          <div class="mb-6">
+
+            <div class="flex justify-between mb-2">
+
+              <span class="text-slate-300">
+                Su Seviyesi
+              </span>
+
+              <span class="text-yellow-400 font-bold">
+                %80
+              </span>
+
+            </div>
+
+            <div class="progress-bg">
+              <div class="progress-fill bg-yellow-500 w-[80%]"></div>
+            </div>
+
+          </div>
+
+          <div class="space-y-4">
+
+            <div class="flex justify-between">
+              <span>Sıcaklık</span>
+              <span class="text-yellow-400 font-bold">71°C</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>RPM</span>
+              <span class="text-yellow-400 font-bold">1580</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>Üretim</span>
+              <span class="text-yellow-400 font-bold">37 MW</span>
+            </div>
+
+          </div>
+
+          <button class="w-full mt-8 bg-red-600 hover:bg-red-700 transition-all py-4 rounded-2xl font-black">
+            ACİL DURDUR
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- CONTROL PANEL -->
+      <div class="glass border border-cyan-700 rounded-3xl p-8 mt-10">
+
+        <h2 class="text-4xl font-black text-cyan-400 mb-8">
+          Savak Kapak Kontrolü
+        </h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          <!-- SELECT -->
+          <div>
+
+            <label class="block mb-3 text-slate-400">
+              Kapak Seç
+            </label>
+
+            <select class="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4">
+
+              <option>Kapak 1</option>
+              <option>Kapak 2</option>
+              <option>Kapak 3</option>
+
+            </select>
+
+          </div>
+
+          <!-- RANGE -->
+          <div>
+
+            <label class="block mb-3 text-slate-400">
+              Açılış Oranı
+            </label>
+
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value="45"
+              class="w-full accent-cyan-500"
+            />
+
+            <div class="text-cyan-400 font-bold mt-3 text-xl">
+              %45
+            </div>
+
+          </div>
+
+        </div>
+
+        <button class="mt-8 bg-cyan-600 hover:bg-cyan-700 transition-all px-10 py-4 rounded-2xl font-black text-lg">
+
+          <i class="fa-solid fa-paper-plane mr-2"></i>
+
+          KAPAK KOMUTU GÖNDER
+
+        </button>
+
+      </div>
+
+    </main>
+
+  </div>
+
+</body>
+
+</html>

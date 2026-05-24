@@ -7,38 +7,34 @@ from typing import Optional
 # CREATE
 # ─────────────────────────────────────────────
 
-class TurbineCreate(BaseModel):
+class SensorCreate(BaseModel):
 
-    turbine_name: str
+    sensor_name: str
 
-    status: Optional[str] = "ACTIVE"
+    sensor_type: str
 
-    rpm: Optional[int] = 0
+    turbine_id: int
 
-    temperature: Optional[float] = 0
-
-    power_output: Optional[float] = 0
+    current_value: Optional[float] = 0
 
 
 # ─────────────────────────────────────────────
 # RESPONSE
 # ─────────────────────────────────────────────
 
-class TurbineResponse(BaseModel):
+class SensorResponse(BaseModel):
 
     id: int
 
-    turbine_name: str
+    sensor_name: str
+
+    sensor_type: str
+
+    turbine_id: int
+
+    current_value: float
 
     status: str
-
-    rpm: int
-
-    temperature: float
-
-    power_output: float
-
-    is_active: bool
 
     created_at: datetime
 

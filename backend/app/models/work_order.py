@@ -6,7 +6,6 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import TIMESTAMP
 
 from sqlalchemy.sql import func
-
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -39,7 +38,8 @@ class WorkOrder(Base):
 
     status = Column(
         String,
-        default="OPEN"
+        default="PENDING",
+        nullable=False
     )
 
     assigned_to = Column(
@@ -51,6 +51,11 @@ class WorkOrder(Base):
     created_by = Column(
         Integer,
         ForeignKey("users.id"),
+        nullable=True
+    )
+
+    due_at = Column(
+        TIMESTAMP(timezone=True),
         nullable=True
     )
 

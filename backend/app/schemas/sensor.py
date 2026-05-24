@@ -1,65 +1,47 @@
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Numeric
-from sqlalchemy import ForeignKey
-from sqlalchemy import TIMESTAMP
-
-from sqlalchemy.sql import func
-
-from sqlalchemy.orm import relationship
-
-from app.database.database import Base
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
 
 
-class Sensor(Base):
+# ─────────────────────────────────────────────
+# CREATE
+# ─────────────────────────────────────────────
 
-    __tablename__ = "sensors"
+class TurbineCreate(BaseModel):
 
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
+    turbine_name: str
 
-    sensor_name = Column(
-        String,
-        nullable=False,
-        unique=True
-    )
+    status: Optional[str] = "ACTIVE"
 
-    sensor_type = Column(
-        String,
-        nullable=False
-    )
+    rpm: Optional[int] = 0
 
-    turbine_id = Column(
-        Integer,
-        ForeignKey("turbines.id"),
-        nullable=False
-    )
+    temperature: Optional[float] = 0
 
-    current_value = Column(
-        Numeric,
-        default=0
-    )
+    power_output: Optional[float] = 0
 
-    status = Column(
-        String,
-        default="ACTIVE"
-    )
 
-    last_signal_time = Column(
-        TIMESTAMP(timezone=True),
-        nullable=True
-    )
+# ─────────────────────────────────────────────
+# RESPONSE
+# ─────────────────────────────────────────────
 
-    created_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now()
-    )
+class TurbineResponse(BaseModel):
 
-    turbine = relationship(
-        "Turbine",
-        back_populates="sensors"
-    )
+    id: int
+
+    turbine_name: str
+
+    status: str
+
+    rpm: int
+
+    temperature: float
+
+    power_output: float
+
+    is_active: bool
+
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }

@@ -1,81 +1,65 @@
-from fastapi import APIRouter
-from fastapi import Depends
-from fastapi import HTTPException
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import Numeric
+from sqlalchemy import Boolean
+from sqlalchemy import TIMESTAMP
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy.sql import func
 
-from app.database.database import get_db
+from sqlalchemy.orm import relationship
 
-from app.models.turbine import Turbine
-
-from app.schemas.turbine import TurbineCreate
-from app.schemas.turbine import TurbineResponse
-
-router = APIRouter(
-    prefix="/turbines",
-    tags=["Turbines"]
-)
+from app.database.database import Base
 
 
-# ─────────────────────────────────────────────
-# CREATE TURBINE
-# ─────────────────────────────────────────────
+class Turbine(Base):
 
-@router.post(
-    "/",
-    response_model=TurbineResponse
-)
+    __tablename__ = "turbines"
 
-async def create_turbine(
-
-    turbine_data: TurbineCreate,
-
-    db: AsyncSession = Depends(get_db)
-
-):
-
-    turbine = Turbine(
-
-        turbine_name=turbine_data.turbine_name,
-
-        status=turbine_data.status,
-
-        rpm=turbine_data.rpm,
-
-        temperature=turbine_data.temperature,
-
-        power_output=turbine_data.power_output,
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
     )
 
-    db.add(turbine)
-
-    await db.commit()
-
-    await db.refresh(turbine)
-
-    return turbine
-
-
-# ─────────────────────────────────────────────
-# GET ALL TURBINES
-# ─────────────────────────────────────────────
-
-@router.get(
-    "/",
-    response_model=list[TurbineResponse]
-)
-
-async def get_turbines(
-
-    db: AsyncSession = Depends(get_db)
-
-):
-
-    result = await db.execute(
-        select(Turbine)
+    turbine_name = Column(
+        String,
+        nullable=False,
+        unique=True
     )
 
-    turbines = result.scalars().all()
+    status = Column(
+        String,
+        default="ACTIVE"
+    )
 
-    return turbines
+    rpm = Column(
+        Integer,
+        default=0
+    )
+
+    temperature = Column(
+        Numeric,
+        default=0
+    )
+
+    power_output = Column(
+        Numeric,
+        default=0
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True
+    )
+
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now()
+    )
+
+    sensors = relationship(
+        "Sensor",
+        back_populates="turbine",
+        cascade="all, delete-orphan"
+    )

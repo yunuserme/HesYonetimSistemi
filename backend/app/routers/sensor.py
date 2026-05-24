@@ -1,79 +1,65 @@
-from fastapi import APIRouter
-from fastapi import Depends
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import Numeric
+from sqlalchemy import ForeignKey
+from sqlalchemy import TIMESTAMP
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy.sql import func
 
-from app.database.database import get_db
+from sqlalchemy.orm import relationship
 
-from app.models.sensor import Sensor
-
-from app.schemas.sensor import SensorCreate
-from app.schemas.sensor import SensorResponse
-
-
-router = APIRouter(
-    prefix="/sensors",
-    tags=["Sensors"]
-)
+from app.database.database import Base
 
 
-# ─────────────────────────────────────────────
-# CREATE SENSOR
-# ─────────────────────────────────────────────
+class Sensor(Base):
 
-@router.post(
-    "/",
-    response_model=SensorResponse
-)
+    __tablename__ = "sensors"
 
-async def create_sensor(
-
-    sensor_data: SensorCreate,
-
-    db: AsyncSession = Depends(get_db)
-
-):
-
-    sensor = Sensor(
-
-        sensor_name=sensor_data.sensor_name,
-
-        sensor_type=sensor_data.sensor_type,
-
-        turbine_id=sensor_data.turbine_id,
-
-        current_value=sensor_data.current_value,
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
     )
 
-    db.add(sensor)
-
-    await db.commit()
-
-    await db.refresh(sensor)
-
-    return sensor
-
-
-# ─────────────────────────────────────────────
-# GET ALL SENSORS
-# ─────────────────────────────────────────────
-
-@router.get(
-    "/",
-    response_model=list[SensorResponse]
-)
-
-async def get_sensors(
-
-    db: AsyncSession = Depends(get_db)
-
-):
-
-    result = await db.execute(
-        select(Sensor)
+    sensor_name = Column(
+        String,
+        nullable=False,
+        unique=True
     )
 
-    sensors = result.scalars().all()
+    sensor_type = Column(
+        String,
+        nullable=False
+    )
 
-    return sensors
+    turbine_id = Column(
+        Integer,
+        ForeignKey("turbines.id"),
+        nullable=False
+    )
+
+    current_value = Column(
+        Numeric,
+        default=0
+    )
+
+    status = Column(
+        String,
+        default="ACTIVE"
+    )
+
+    last_signal_time = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True
+    )
+
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now()
+    )
+
+    turbine = relationship(
+        "Turbine",
+        back_populates="sensors"
+    )

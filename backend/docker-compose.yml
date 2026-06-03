@@ -10,7 +10,7 @@ services:
 
     environment:
       POSTGRES_USER: hes_admin
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: HesAdmin123456
       POSTGRES_DB: hes_management
 
     ports:

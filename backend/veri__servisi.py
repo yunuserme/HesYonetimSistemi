@@ -16,6 +16,7 @@ import httpx
 import pandas as pd
 import random
 import logging
+import numpy as np
 from datetime import datetime
 
 # ---------------------------------------------------------
@@ -201,7 +202,7 @@ async def sensor_guncelle(
 async def alarm_olustur(
     client: httpx.AsyncClient,
     token: str,
-    turbine_id: int,
+    sensor_id: int,
     mesaj: str,
     seviye: str = "CRITICAL"
 ):
@@ -210,20 +211,43 @@ async def alarm_olustur(
     """
     headers = {"Authorization": f"Bearer {token}"}
     veri = {
-        "turbine_id": turbine_id,
-        "sensor_id": None,
+        "sensor_id": sensor_id,
         "message": mesaj,
-        "severity": seviye,
-        "is_active": True
-        
+        "severity": seviye
     }
 
     yanit = await client.post(f"{BASE_URL}/alarms/", json=veri, headers=headers)
     if yanit.status_code in (200, 201):
-        log.warning(f"  🚨 ALARM oluşturuldu → Türbin {turbine_id}: {mesaj}")
+        log.warning(f"  🚨 ALARM oluşturuldu → Sensör {sensor_id}: {mesaj}")
     else:
         log.error(f"  ❌ Alarm oluşturulamadı: {yanit.text}")
 
+# ---------------------------------------------------------
+# 7. ADIM: İŞ EMRİ OLUŞTUR (POST /work-orders/)
+# ---------------------------------------------------------
+async def is_emri_olustur(
+    client: httpx.AsyncClient,
+    token: str,
+    turbine_id: int,
+    sorun_aciklamasi: str,
+    oncelik: str = "HIGH"
+):
+    """
+    Anomali tespit edildiğinde otomatik olarak iş emri oluşturur.
+    """
+    headers = {"Authorization": f"Bearer {token}"}
+    veri = {
+        "turbine_id": turbine_id,
+        "description": sorun_aciklamasi,
+        "priority": oncelik,
+        "status": "OPEN"
+    }
+
+    yanit = await client.post(f"{BASE_URL}/work-orders/", json=veri, headers=headers)
+    if yanit.status_code in (200, 201):
+        log.info(f"   İŞ EMRİ oluşturuldu → Türbin {turbine_id}: {sorun_aciklamasi}")
+    else:
+        log.error(f"   İş emri oluşturulamadı: {yanit.text}")
 
 # ---------------------------------------------------------
 # ANA DÖNGÜ: Periyodik veri gönderimi
@@ -262,6 +286,7 @@ async def veri_gonder_dongu(df: pd.DataFrame):
             # Her türbin için veri gönder
             for i, turbin in enumerate(turbinler):
                 turbine_id = turbin["id"]
+                
 
                 # CSV sütun eşleştirmesi (Kaggle pump_sensor_data veri seti)
                 # sensor_00 → RPM, sensor_01 → Sıcaklık, sensor_02 → Su seviyesi, sensor_03 → Güç
@@ -294,21 +319,44 @@ async def veri_gonder_dongu(df: pd.DataFrame):
 
                 # Türbini güncelle
                 await turbin_guncelle(client, token, turbine_id, rpm_son, sicaklik_son, guc_ham)
+                energy = predict_energy(
+                     model,
+                     rpm_son,
+                     sicaklik_son,
+                     su_seviyesi
+                )
+                log.info(f"🔮 Enerji tahmini: {energy:.2f} MW")
 
-                # Anormallik varsa alarm oluştur
+                # Varsayılan sensor_id bulalım
+                varsayilan_sensor_id = turbin["sensors"][0]["id"] if "sensors" in turbin and turbin["sensors"] else 1
+
+                
+                 # Anormallik varsa alarm ve iş emri oluştur
                 if rpm_son > RPM_MAX:
+                    hata_mesaji = f"Türbin {turbine_id} aşırı RPM: {rpm_son:.0f} devir/dk (limit: {RPM_MAX})"
                     await alarm_olustur(
-                        client, token, turbine_id,
-                        f"Türbin {turbine_id} aşırı RPM: {rpm_son:.0f} devir/dk (limit: {RPM_MAX})",
+                        client, token, varsayilan_sensor_id,
+                        hata_mesaji,
                         seviye="CRITICAL"
                     )
+                    await is_emri_olustur(
+                        client, token, turbine_id,
+                        hata_mesaji,
+                        oncelik="HIGH"
+                    )
+                    
                 if sicaklik_son > SICAKLIK_MAX:
+                    hata_mesaji = f"Türbin {turbine_id} aşırı sıcaklık: {sicaklik_son:.1f}°C (limit: {SICAKLIK_MAX}°C)"
                     await alarm_olustur(
-                        client, token, turbine_id,
-                        f"Türbin {turbine_id} aşırı sıcaklık: {sicaklik_son:.1f}°C (limit: {SICAKLIK_MAX}°C)",
+                        client, token, varsayilan_sensor_id,
+                        hata_mesaji,
                         seviye="CRITICAL"
                     )
-
+                    await is_emri_olustur(
+                        client, token, turbine_id,
+                        hata_mesaji,
+                        oncelik="HIGH"
+                    )
                 # Sensörleri güncelle (turbine'e bağlı sensörler varsa)
                 if "sensors" in turbin and turbin["sensors"]:
                     for sensor in turbin["sensors"]:
@@ -343,6 +391,7 @@ if __name__ == "__main__":
 
     # CSV oku
     df = csv_oku(CSV_DOSYASI)
+    model = train_energy_model(df)
 
     # Asenkron döngüyü başlat
     asyncio.run(veri_gonder_dongu(df))
@@ -401,3 +450,17 @@ def anomali_csv_uret(df: pd.DataFrame, cikti_dosyasi: str = "anomali_verisi.csv"
     log.info(f"Elif-Tunahan icin anomali CSV uretildi: {cikti_dosyasi}")
     log.info(f"Toplam: {len(anomali_df)} satir, Anormal: {anomali_df['is_anomaly'].sum()} kayit")
     return anomali_df
+def train_energy_model(df):
+    from sklearn.ensemble import RandomForestRegressor
+
+    X = df[["sensor_00", "sensor_01", "sensor_02"]]
+    y = df["sensor_03"]
+
+    model = RandomForestRegressor()
+    model.fit(X, y)
+
+    return model
+def predict_energy(model, rpm, temp, water):
+    import numpy as np
+    data = np.array([[rpm, temp, water]])
+    return model.predict(data)[0]

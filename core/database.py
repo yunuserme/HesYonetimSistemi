@@ -5,7 +5,7 @@ from core.config import settings
 # ── Engine ────────────────────────────────────────────────────────────────────
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=settings.DEBUG,   # SQL sorgularını terminale yaz (geliştirme için)
+    echo=settings.DEBUG,
     pool_size=10,
     max_overflow=20,
 )

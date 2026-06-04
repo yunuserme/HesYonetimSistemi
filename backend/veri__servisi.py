@@ -16,6 +16,7 @@ import httpx
 import pandas as pd
 import random
 import logging
+import numpy as np
 from datetime import datetime
 
 # ---------------------------------------------------------
@@ -285,6 +286,7 @@ async def veri_gonder_dongu(df: pd.DataFrame):
             # Her türbin için veri gönder
             for i, turbin in enumerate(turbinler):
                 turbine_id = turbin["id"]
+                
 
                 # CSV sütun eşleştirmesi (Kaggle pump_sensor_data veri seti)
                 # sensor_00 → RPM, sensor_01 → Sıcaklık, sensor_02 → Su seviyesi, sensor_03 → Güç
@@ -317,6 +319,13 @@ async def veri_gonder_dongu(df: pd.DataFrame):
 
                 # Türbini güncelle
                 await turbin_guncelle(client, token, turbine_id, rpm_son, sicaklik_son, guc_ham)
+                energy = predict_energy(
+                     model,
+                     rpm_son,
+                     sicaklik_son,
+                     su_seviyesi
+                )
+                log.info(f"🔮 Enerji tahmini: {energy:.2f} MW")
 
                 # Varsayılan sensor_id bulalım
                 varsayilan_sensor_id = turbin["sensors"][0]["id"] if "sensors" in turbin and turbin["sensors"] else 1
@@ -382,6 +391,7 @@ if __name__ == "__main__":
 
     # CSV oku
     df = csv_oku(CSV_DOSYASI)
+    model = train_energy_model(df)
 
     # Asenkron döngüyü başlat
     asyncio.run(veri_gonder_dongu(df))
@@ -440,3 +450,17 @@ def anomali_csv_uret(df: pd.DataFrame, cikti_dosyasi: str = "anomali_verisi.csv"
     log.info(f"Elif-Tunahan icin anomali CSV uretildi: {cikti_dosyasi}")
     log.info(f"Toplam: {len(anomali_df)} satir, Anormal: {anomali_df['is_anomaly'].sum()} kayit")
     return anomali_df
+def train_energy_model(df):
+    from sklearn.ensemble import RandomForestRegressor
+
+    X = df[["sensor_00", "sensor_01", "sensor_02"]]
+    y = df["sensor_03"]
+
+    model = RandomForestRegressor()
+    model.fit(X, y)
+
+    return model
+def predict_energy(model, rpm, temp, water):
+    import numpy as np
+    data = np.array([[rpm, temp, water]])
+    return model.predict(data)[0]

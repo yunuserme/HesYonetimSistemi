@@ -33,9 +33,12 @@ export default function Login() {
     setError("");
 
     try {
-      // Sadece signIn işleminin bitmesini bekle.
-      // Başarılı olursa sayfanın en üstündeki <Navigate /> bloğu otomatik çalışacak.
+      // 1. Şifreyi arka plana sor
       await signIn(formData); 
+      
+      // 2. İşlem başarılıysa bekleme yapmadan ana sayfaya (/) yönlendir.
+      // Sen adresten "login" yazısını silince nasıl çalışıyorsa, bu kod da aynısını yapacak.
+      window.location.href = "/"; 
       
     } catch (loginError) {
       setError(

@@ -1,1 +1,10 @@
+<<<<<<< HEAD
 .env
+=======
+node_modules/
+dist/
+dev-server.log
+dev-server.err
+.env
+.env.local
+>>>>>>> 9ba2d2cf07df674ad1da5a59346a3ac0bf7c52e5

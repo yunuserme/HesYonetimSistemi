@@ -28,19 +28,16 @@ export default function Login() {
     }));
   }
 
-  async function handleSubmit(event) {
+ async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
     try {
-      const result = await signIn(formData);
-      const fallbackPath = getDefaultPathForRole(result.user.role);
-      const requestedPath = location.state?.from?.pathname;
-      const nextPath = requestedPath && requestedPath !== "/login"
-        ? requestedPath
-        : fallbackPath;
-
-      navigate(nextPath, { replace: true });
+      // Sadece signIn işleminin bitmesini bekle.
+      // Başarılı olursa AuthContext state'i güncelleyecek ve 
+      // en üstteki <Navigate /> bloğu otomatik çalışacak.
+      await signIn(formData); 
+      
     } catch (loginError) {
       setError(
         loginError.status === 401

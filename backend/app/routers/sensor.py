@@ -1,65 +1,83 @@
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Numeric
-from sqlalchemy import ForeignKey
-from sqlalchemy import TIMESTAMP
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import HTTPException
 
-from sqlalchemy.sql import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from sqlalchemy.orm import relationship
+from app.database.database import get_db
+from app.models.sensor import Sensor
+from app.schemas.sensor import SensorCreate, SensorResponse, SensorUpdate
 
-from app.database.database import Base
+router = APIRouter(
+    prefix="/sensors",
+    tags=["Sensors"]
+)
 
-
-class Sensor(Base):
-
-    __tablename__ = "sensors"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
+# ─────────────────────────────────────────────
+# CREATE SENSOR
+# ─────────────────────────────────────────────
+@router.post(
+    "/",
+    response_model=SensorResponse
+)
+async def create_sensor(
+    sensor_data: SensorCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    sensor = Sensor(
+        sensor_name=sensor_data.sensor_name,
+        sensor_type=sensor_data.sensor_type,
+        turbine_id=sensor_data.turbine_id,
+        current_value=sensor_data.current_value,
     )
+    db.add(sensor)
+    await db.commit()
+    await db.refresh(sensor)
+    return sensor
 
-    sensor_name = Column(
-        String,
-        nullable=False,
-        unique=True
+# ─────────────────────────────────────────────
+# GET ALL SENSORS
+# ─────────────────────────────────────────────
+@router.get(
+    "/",
+    response_model=list[SensorResponse]
+)
+async def get_sensors(
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Sensor)
     )
+    sensors = result.scalars().all()
+    return sensors
 
-    sensor_type = Column(
-        String,
-        nullable=False
+# ─────────────────────────────────────────────
+# UPDATE SENSOR
+# ─────────────────────────────────────────────
+@router.patch(
+    "/{sensor_id}",
+    response_model=SensorResponse
+)
+async def update_sensor(
+    sensor_id: int,
+    sensor_data: SensorUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Sensor).where(Sensor.id == sensor_id)
     )
+    sensor = result.scalar_one_or_none()
+    if not sensor:
+        raise HTTPException(
+            status_code=404,
+            detail="Sensor not found"
+        )
 
-    turbine_id = Column(
-        Integer,
-        ForeignKey("turbines.id"),
-        nullable=False
-    )
+    update_data = sensor_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(sensor, field, value)
 
-    current_value = Column(
-        Numeric,
-        default=0
-    )
-
-    status = Column(
-        String,
-        default="ACTIVE"
-    )
-
-    last_signal_time = Column(
-        TIMESTAMP(timezone=True),
-        nullable=True
-    )
-
-    created_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now()
-    )
-
-    turbine = relationship(
-        "Turbine",
-        back_populates="sensors"
-    )
+    await db.commit()
+    await db.refresh(sensor)
+    return sensor

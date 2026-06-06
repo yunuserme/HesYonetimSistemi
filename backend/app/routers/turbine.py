@@ -1,65 +1,84 @@
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Numeric
-from sqlalchemy import Boolean
-from sqlalchemy import TIMESTAMP
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import HTTPException
 
-from sqlalchemy.sql import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from sqlalchemy.orm import relationship
+from app.database.database import get_db
 
-from app.database.database import Base
+from app.models.turbine import Turbine
+
+from app.schemas.turbine import (
+    TurbineCreate,
+    TurbineResponse,
+    TurbineUpdate
+)
+
+router = APIRouter(
+    prefix="/turbines",
+    tags=["Turbines"]
+)
 
 
-class Turbine(Base):
+# ─────────────────────────────────────────────
+# CREATE TURBINE
+# ─────────────────────────────────────────────
 
-    __tablename__ = "turbines"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
+@router.post("/", response_model=TurbineResponse)
+async def create_turbine(
+    turbine_data: TurbineCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    turbine = Turbine(
+        turbine_name=turbine_data.turbine_name,
+        status=turbine_data.status,
+        rpm=turbine_data.rpm,
+        temperature=turbine_data.temperature,
+        power_output=turbine_data.power_output,
     )
 
-    turbine_name = Column(
-        String,
-        nullable=False,
-        unique=True
-    )
+    db.add(turbine)
+    await db.commit()
+    await db.refresh(turbine)
 
-    status = Column(
-        String,
-        default="ACTIVE"
-    )
+    return turbine
 
-    rpm = Column(
-        Integer,
-        default=0
-    )
 
-    temperature = Column(
-        Numeric,
-        default=0
-    )
+# ─────────────────────────────────────────────
+# GET ALL TURBINES
+# ─────────────────────────────────────────────
 
-    power_output = Column(
-        Numeric,
-        default=0
-    )
+@router.get("/", response_model=list[TurbineResponse])
+async def get_turbines(
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Turbine))
+    turbines = result.scalars().all()
+    return turbines
 
-    is_active = Column(
-        Boolean,
-        default=True
-    )
 
-    created_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now()
-    )
+# ─────────────────────────────────────────────
+# UPDATE TURBINE
+# ─────────────────────────────────────────────
 
-    sensors = relationship(
-        "Sensor",
-        back_populates="turbine",
-        cascade="all, delete-orphan"
-    )
+@router.patch("/{turbine_id}", response_model=TurbineResponse)
+async def update_turbine(
+    turbine_id: int,
+    turbine_data: TurbineUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Turbine).where(Turbine.id == turbine_id))
+    turbine = result.scalar_one_or_none()
+
+    if not turbine:
+        raise HTTPException(status_code=404, detail="Turbine not found")
+
+    update_data = turbine_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(turbine, field, value)
+
+    await db.commit()
+    await db.refresh(turbine)
+
+    return turbine

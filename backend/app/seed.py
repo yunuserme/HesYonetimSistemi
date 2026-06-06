@@ -15,11 +15,11 @@ from app.core.database import Base
 
 from app.core.security import hash_password
 
-from models.user import User
-from models.user import UserRole
+from app.models.user import User
+from app.models.user import UserRole
 
-from models.turbine import Turbine
-from models.sensor import Sensor
+from app.models.turbine import Turbine
+from app.models.sensor import Sensor
 
 
 # =========================
@@ -152,6 +152,10 @@ async def seed():
             print(
                 f"✅ User oluşturuldu: {u['username']}"
             )
+            
+        await db.commit()
+
+        print("✅ Users committed")
 
         # =========================
         # TURBINES
@@ -166,7 +170,7 @@ async def seed():
                 )
             )
 
-            if result.scalar_one_or_none():
+            if result.scalars().first():
                 print(
                     f"⏭ {t['turbine_name']} zaten var."
                 )
@@ -202,7 +206,7 @@ async def seed():
                 )
             )
 
-            turbine = turbine_result.scalar_one()
+            turbine = turbine_result.scalars().first()
 
             result = await db.execute(
                 select(Sensor).where(

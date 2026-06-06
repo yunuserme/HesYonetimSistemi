@@ -34,8 +34,7 @@ export default function Login() {
 
     try {
       // Sadece signIn işleminin bitmesini bekle.
-      // Başarılı olursa AuthContext state'i güncelleyecek ve 
-      // en üstteki <Navigate /> bloğu otomatik çalışacak.
+      // Başarılı olursa sayfanın en üstündeki <Navigate /> bloğu otomatik çalışacak.
       await signIn(formData); 
       
     } catch (loginError) {
@@ -46,7 +45,6 @@ export default function Login() {
       );
     }
   }
-
   return (
     <main className="grid min-h-screen place-items-center px-4 py-10">
       <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-soft">

@@ -27,6 +27,8 @@ from app.models.work_order_log import WorkOrderLog
 from app.routers.turbine import router as turbine_router
 from app.routers.alarm import router as alarm_router
 from app.routers.sensor import router as sensor_router
+from app.routers.scada import router as scada_router
+from app.routers.energy import router as energy_router
 
 
 # ─────────────────────────────────────────────────────────────
@@ -114,6 +116,8 @@ app.include_router(turbine_router)
 app.include_router(work_order_router)
 app.include_router(alarm_router)
 app.include_router(sensor_router)
+app.include_router(scada_router)
+app.include_router(energy_router)
 
 # ─────────────────────────────────────────────────────────────
 # STARTUP
@@ -128,7 +132,7 @@ async def startup():
             Base.metadata.create_all
         )
 
-    print("✅ HES Backend başlatıldı.")
+    print("[OK] HES Backend baslatildi.")
 
 
 # ─────────────────────────────────────────────────────────────

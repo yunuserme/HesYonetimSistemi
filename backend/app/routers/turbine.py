@@ -9,8 +9,11 @@ from app.database.database import get_db
 
 from app.models.turbine import Turbine
 
-from app.schemas.turbine import TurbineCreate
-from app.schemas.turbine import TurbineResponse
+from app.schemas.turbine import (
+    TurbineCreate,
+    TurbineResponse,
+    TurbineUpdate
+)
 
 router = APIRouter(
     prefix="/turbines",
@@ -22,36 +25,21 @@ router = APIRouter(
 # CREATE TURBINE
 # ─────────────────────────────────────────────
 
-@router.post(
-    "/",
-    response_model=TurbineResponse
-)
-
+@router.post("/", response_model=TurbineResponse)
 async def create_turbine(
-
     turbine_data: TurbineCreate,
-
     db: AsyncSession = Depends(get_db)
-
 ):
-
     turbine = Turbine(
-
         turbine_name=turbine_data.turbine_name,
-
         status=turbine_data.status,
-
         rpm=turbine_data.rpm,
-
         temperature=turbine_data.temperature,
-
         power_output=turbine_data.power_output,
     )
 
     db.add(turbine)
-
     await db.commit()
-
     await db.refresh(turbine)
 
     return turbine
@@ -61,21 +49,36 @@ async def create_turbine(
 # GET ALL TURBINES
 # ─────────────────────────────────────────────
 
-@router.get(
-    "/",
-    response_model=list[TurbineResponse]
-)
-
+@router.get("/", response_model=list[TurbineResponse])
 async def get_turbines(
-
     db: AsyncSession = Depends(get_db)
-
 ):
-
-    result = await db.execute(
-        select(Turbine)
-    )
-
+    result = await db.execute(select(Turbine))
     turbines = result.scalars().all()
-
     return turbines
+
+
+# ─────────────────────────────────────────────
+# UPDATE TURBINE
+# ─────────────────────────────────────────────
+
+@router.patch("/{turbine_id}", response_model=TurbineResponse)
+async def update_turbine(
+    turbine_id: int,
+    turbine_data: TurbineUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Turbine).where(Turbine.id == turbine_id))
+    turbine = result.scalar_one_or_none()
+
+    if not turbine:
+        raise HTTPException(status_code=404, detail="Turbine not found")
+
+    update_data = turbine_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(turbine, field, value)
+
+    await db.commit()
+    await db.refresh(turbine)
+
+    return turbine

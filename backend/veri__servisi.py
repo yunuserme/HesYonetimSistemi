@@ -237,10 +237,10 @@ async def is_emri_olustur(
     """
     headers = {"Authorization": f"Bearer {token}"}
     veri = {
-        "turbine_id": turbine_id,
+        "title": f"Turbin {turbine_id} anomali uyarisi",
         "description": sorun_aciklamasi,
         "priority": oncelik,
-        "status": "OPEN"
+        "assigned_to": None
     }
 
     yanit = await client.post(f"{BASE_URL}/work-orders/", json=veri, headers=headers)

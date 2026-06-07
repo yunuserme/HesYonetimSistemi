@@ -1,23 +1,13 @@
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from dotenv import load_dotenv
 
 from alembic import context
-
-# .env dosyasını yükle
-load_dotenv()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
-# DATABASE_URL'yi .env'den al, asyncpg varsa psycopg2 ile değiştir (sync bağlantı gerekli)
-_db_url = os.getenv("DATABASE_URL", "").replace("+asyncpg", "").replace("+aiosqlite", "")
-if _db_url:
-    config.set_main_option("sqlalchemy.url", _db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

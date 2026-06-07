@@ -76,10 +76,11 @@ class TurbineResponse(BaseModel):
 
 class AlarmResponse(BaseModel):
     id: int
-    turbine_id: int
+    sensor_id: int
     message: str
     severity: str
-    is_active: bool
+    resolved: bool
+    status: str
     created_at: Optional[datetime]
 
     class Config:
@@ -151,19 +152,20 @@ async def get_live_data(
             toplam_guc += float(turbin.power_output or 0)
             aktif_sayi += 1
 
-    # Aktif alarmları getir
+    # Aktif alarmları getir (resolved == False → henüz çözülmemiş alarmlar)
     alarm_result = await db.execute(
-        select(Alarm).where(Alarm.is_active == True)
+        select(Alarm).where(Alarm.resolved == False)
     )
     alarmlar = alarm_result.scalars().all()
 
     alarm_listesi = [
         AlarmResponse(
             id=a.id,
-            turbine_id=a.turbine_id,
+            sensor_id=a.sensor_id,
             message=a.message,
             severity=a.severity,
-            is_active=a.is_active,
+            resolved=a.resolved,
+            status=a.status,
             created_at=a.created_at if hasattr(a, 'created_at') else None
         ) for a in alarmlar
     ]

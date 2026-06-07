@@ -73,7 +73,6 @@ describe("TechnicianWorkOrders", () => {
   beforeEach(() => {
     serviceMock.getWorkOrders.mockResolvedValue({
       items: workOrders,
-      source: "mock",
     });
     serviceMock.acceptWorkOrder.mockImplementation((workOrder) =>
       Promise.resolve({ ...workOrder, uiStatus: "Accepted" }),
@@ -90,12 +89,12 @@ describe("TechnicianWorkOrders", () => {
     );
   });
 
-  it("renders the work orders screen with fallback data", async () => {
+  it("renders the work orders screen with live data", async () => {
     render(<TechnicianWorkOrders />);
 
     expect(await screen.findByTestId("technician-work-orders")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "My Work Orders" })).toBeInTheDocument();
-    expect(screen.getByText("Offline mode")).toBeInTheDocument();
+    expect(screen.getByText("Live data")).toBeInTheDocument();
     expect(screen.getByText("Pending work order")).toBeInTheDocument();
   });
 

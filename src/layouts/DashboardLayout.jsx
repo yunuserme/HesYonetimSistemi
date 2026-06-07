@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, BriefcaseBusiness, ChevronDown, ClipboardList, Gauge, LogOut, UserRound } from "lucide-react";
+import { Activity, BarChart3, BriefcaseBusiness, ChevronDown, ClipboardList, Gauge, LogOut, RadioTower, UserRound } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -13,23 +13,35 @@ const managerNavigation = [
   { to: "/forecast", label: "Energy Forecast", icon: BarChart3 },
 ];
 
+const SCADA_NAVIGATION_ROLES = ["ADMIN", "OPERATOR"];
+const scadaNavigationItem = { to: "/scada", label: "SCADA Panel", icon: RadioTower };
+
+function normalizeRole(role) {
+  return String(role ?? "").toUpperCase();
+}
+
 export default function DashboardLayout() {
-  const { authSource, signOut, user } = useAuth();
+  const { signOut, user } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
-  const navigation = user?.role === "TECHNICIAN"
+  const role = normalizeRole(user?.role);
+  const canViewScadaNavigation = SCADA_NAVIGATION_ROLES.includes(role);
+  const navigation = role === "TECHNICIAN"
     ? [{ to: "/technician/work-orders", label: "My Work Orders", icon: ClipboardList }]
-    : user?.role === "ADMIN"
+    : role === "ADMIN"
       ? [
           ...coreNavigation,
+          ...(canViewScadaNavigation ? [scadaNavigationItem] : []),
           { to: "/manager/dashboard", label: "Manager Dashboard", icon: BriefcaseBusiness },
           { to: "/technician/work-orders", label: "Work Orders", icon: ClipboardList },
         ]
-      : user?.role === "MANAGER"
+      : role === "MANAGER"
         ? managerNavigation
-      : coreNavigation;
-  const statusLabel = authSource === "api" ? "Live data" : "Offline mode";
+      : canViewScadaNavigation
+        ? [scadaNavigationItem]
+        : coreNavigation;
+  const statusLabel = "Live data";
 
   useEffect(() => {
     function handleOutsideClick(event) {

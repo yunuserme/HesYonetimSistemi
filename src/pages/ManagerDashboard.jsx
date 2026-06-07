@@ -15,9 +15,10 @@ import MetricCard from "../components/MetricCard.jsx";
 import { getManagerDashboardData } from "../services/managerService.js";
 
 const metricIcons = {
-  todayProduction: Zap,
+  currentProduction: Zap,
   weeklyProduction: TrendingUp,
   monthlyProduction: Gauge,
+  energyModelSamples: Activity,
   activeTurbines: Power,
   offlineTurbines: Clock3,
   faultyTurbines: Wrench,
@@ -67,9 +68,11 @@ export default function ManagerDashboard() {
           setError("");
         }
       })
-      .catch(() => {
+      .catch((loadError) => {
+        console.error("Manager dashboard data could not be loaded.", loadError);
+
         if (isMounted) {
-          setError("Manager dashboard data could not be loaded.");
+          setError(loadError.message || "Manager dashboard data could not be loaded.");
         }
       });
 
@@ -107,7 +110,7 @@ export default function ManagerDashboard() {
         </div>
         <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-soft">
           <ShieldCheck className="h-4 w-4 text-emerald-700" />
-          Mock data
+          Live data
         </div>
       </header>
 
@@ -124,7 +127,7 @@ export default function ManagerDashboard() {
 
       <MetricSection
         title="Production"
-        subtitle="Generation totals for the current operating periods."
+        subtitle="Live production and available backend energy model indicators."
         metrics={dashboardData.production ?? []}
       />
 
@@ -136,7 +139,7 @@ export default function ManagerDashboard() {
 
       <MetricSection
         title="Fault Response"
-        subtitle="Fault workload, resolution progress, and response timing."
+        subtitle="Alarm workload and work order resolution indicators."
         metrics={dashboardData.faults ?? []}
       />
     </div>

@@ -5,18 +5,30 @@ import Login from "./pages/Login.jsx";
 import EngineerDashboard from "./pages/EngineerDashboard.jsx";
 import EnergyForecast from "./pages/EnergyForecast.jsx";
 import ManagerDashboard from "./pages/ManagerDashboard.jsx";
+import ScadaPanel from "./pages/ScadaPanel.jsx";
 import TechnicianWorkOrders from "./pages/TechnicianWorkOrders.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute.jsx";
 
+const SCADA_ALLOWED_ROLES = ["ADMIN", "OPERATOR"];
+
+function normalizeRole(role) {
+  return String(role ?? "").toUpperCase();
+}
+
 function RoleHome() {
   const { user } = useAuth();
+  const role = normalizeRole(user?.role);
 
-  if (user?.role === "TECHNICIAN") {
+  if (role === "TECHNICIAN") {
     return <Navigate to="/technician/work-orders" replace />;
   }
 
-  if (user?.role === "MANAGER") {
+  if (role === "MANAGER") {
     return <Navigate to="/manager/dashboard" replace />;
+  }
+
+  if (role === "OPERATOR") {
+    return <Navigate to="/scada" replace />;
   }
 
   return <EngineerDashboard />;
@@ -35,6 +47,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["ADMIN", "ENGINEER", "MANAGER"]}>
                 <EnergyForecast />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="scada"
+            element={
+              <ProtectedRoute allowedRoles={SCADA_ALLOWED_ROLES}>
+                <ScadaPanel />
               </ProtectedRoute>
             }
           />

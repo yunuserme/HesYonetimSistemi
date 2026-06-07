@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ApiError, clearStoredTokens, getStoredTokens, setStoredTokens } from "../services/apiClient.js";
 import {
   clearStoredUser,
-  getStoredUser,
-  isMockToken,
   login,
   logout,
   me,
@@ -22,12 +20,15 @@ export function getDefaultPathForRole(role) {
     return "/manager/dashboard";
   }
 
+  if (role === "OPERATOR") {
+    return "/scada";
+  }
+
   return "/";
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [authSource, setAuthSource] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
@@ -46,22 +47,10 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        if (isMockToken(accessToken)) {
-          const storedUser = getStoredUser();
-
-          if (isMounted) {
-            setUser(storedUser);
-            setAuthSource("mock");
-          }
-
-          return;
-        }
-
         const currentUser = await me();
 
         if (isMounted) {
           setUser(currentUser);
-          setAuthSource("api");
         }
       } catch (error) {
         if (error instanceof ApiError && error.status === 401 && refreshToken) {
@@ -76,7 +65,6 @@ export function AuthProvider({ children }) {
 
             if (isMounted) {
               setUser(currentUser);
-              setAuthSource("api");
             }
 
             return;
@@ -111,11 +99,9 @@ export function AuthProvider({ children }) {
 
       setStoredUser(currentUser);
       setUser(currentUser);
-      setAuthSource(result.source);
 
       return {
         user: currentUser,
-        source: result.source,
       };
     } finally {
       setIsAuthenticating(false);
@@ -131,21 +117,19 @@ export function AuthProvider({ children }) {
       clearStoredTokens();
       clearStoredUser();
       setUser(null);
-      setAuthSource(null);
     }
   }
 
   const value = useMemo(
     () => ({
       user,
-      authSource,
       isAuthenticated: Boolean(user),
       isInitializing,
       isAuthenticating,
       signIn,
       signOut,
     }),
-    [authSource, isAuthenticating, isInitializing, user],
+    [isAuthenticating, isInitializing, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

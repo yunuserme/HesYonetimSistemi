@@ -26,7 +26,8 @@ import ForecastTable from "../components/forecast/ForecastTable.jsx";
 import {
   calculateForecastMetrics,
   calculateForecastSummary,
-  getEnergyForecastData,
+  getEnergyPredictions,
+  runManualPrediction,
 } from "../services/energyService.js";
 import { exportForecastExcel, exportForecastPdf } from "../services/exportService.js";
 
@@ -85,6 +86,110 @@ const performanceCards = [
 ];
 
 const statusOptions = ["All", "NORMAL", "REVIEW", "WARNING"];
+const initialManualPredictionForm = {
+  rpm: "",
+  temperature: "",
+  waterLevel: "",
+  turbineId: "",
+};
+
+function parseRequiredPredictionNumber(label, value) {
+  const trimmedValue = String(value).trim();
+
+  if (!trimmedValue) {
+    return { error: `${label} is required.` };
+  }
+
+  const numberValue = Number(trimmedValue);
+
+  if (!Number.isFinite(numberValue)) {
+    return { error: `${label} must be a valid number.` };
+  }
+
+  if (numberValue < 0) {
+    return { error: `${label} cannot be negative.` };
+  }
+
+  return { value: numberValue };
+}
+
+function validateManualPredictionForm(form) {
+  const rpm = parseRequiredPredictionNumber("RPM", form.rpm);
+
+  if (rpm.error) {
+    return { error: rpm.error };
+  }
+
+  const temperature = parseRequiredPredictionNumber("Temperature", form.temperature);
+
+  if (temperature.error) {
+    return { error: temperature.error };
+  }
+
+  const waterLevel = parseRequiredPredictionNumber("Water Level", form.waterLevel);
+
+  if (waterLevel.error) {
+    return { error: waterLevel.error };
+  }
+
+  const turbineIdValue = String(form.turbineId).trim();
+  let turbineId = null;
+
+  if (turbineIdValue) {
+    const numericTurbineId = Number(turbineIdValue);
+
+    if (!Number.isInteger(numericTurbineId) || numericTurbineId <= 0) {
+      return { error: "Turbine ID must be a positive integer." };
+    }
+
+    turbineId = numericTurbineId;
+  }
+
+  return {
+    values: {
+      rpm: rpm.value,
+      temperature: temperature.value,
+      waterLevel: waterLevel.value,
+      turbineId,
+    },
+  };
+}
+
+function formatPredictionTimestamp(value) {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function ManualPredictionInput({ id, label, value, onChange, placeholder }) {
+  return (
+    <label htmlFor={id} className="block">
+      <span className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+        {label}
+      </span>
+      <input
+        id={id}
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+      />
+    </label>
+  );
+}
 
 function FilterButtonGroup({ label, options, value, onChange }) {
   return (
@@ -138,17 +243,33 @@ export default function EnergyForecast() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [turbineFilter, setTurbineFilter] = useState("All");
   const [forecastData, setForecastData] = useState(null);
+  const [loadError, setLoadError] = useState("");
   const [exportError, setExportError] = useState("");
+  const [manualPredictionForm, setManualPredictionForm] = useState(initialManualPredictionForm);
+  const [manualPredictionResult, setManualPredictionResult] = useState(null);
+  const [manualPredictionError, setManualPredictionError] = useState("");
+  const [isManualPredictionSubmitting, setIsManualPredictionSubmitting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    getEnergyForecastData(range).then((data) => {
-      if (isMounted) {
-        setForecastData(data);
-        setExportError("");
-      }
-    });
+    setForecastData(null);
+    setLoadError("");
+
+    getEnergyPredictions(range)
+      .then((data) => {
+        if (isMounted) {
+          setForecastData(data);
+          setExportError("");
+        }
+      })
+      .catch((error) => {
+        console.error("Energy forecast data could not be loaded.", error);
+
+        if (isMounted) {
+          setLoadError(error.message || "Energy forecast data could not be loaded.");
+        }
+      });
 
     return () => {
       isMounted = false;
@@ -218,6 +339,38 @@ export default function EnergyForecast() {
     }
   }
 
+  function updateManualPredictionField(field, value) {
+    setManualPredictionForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+    setManualPredictionError("");
+  }
+
+  async function handleManualPredictionSubmit(event) {
+    event.preventDefault();
+
+    const validation = validateManualPredictionForm(manualPredictionForm);
+
+    if (validation.error) {
+      setManualPredictionError(validation.error);
+      return;
+    }
+
+    setIsManualPredictionSubmitting(true);
+    setManualPredictionError("");
+
+    try {
+      const result = await runManualPrediction(validation.values);
+
+      setManualPredictionResult(result);
+    } catch (error) {
+      setManualPredictionError(error.message || "Manual prediction could not be completed.");
+    } finally {
+      setIsManualPredictionSubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-6" data-testid="energy-forecast">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -256,7 +409,11 @@ export default function EnergyForecast() {
         </div>
       </header>
 
-      {!forecastData ? (
+      {loadError ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+          {loadError}
+        </div>
+      ) : !forecastData ? (
         <div className="grid min-h-[60vh] place-items-center rounded-lg border border-slate-200 bg-white">
           <p className="text-sm font-semibold text-slate-500">Loading forecast data...</p>
         </div>
@@ -288,6 +445,151 @@ export default function EnergyForecast() {
                 icon={card.icon}
               />
             ))}
+          </section>
+
+          <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">Manual Prediction</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Run a single backend prediction from entered operating values.
+                </p>
+              </div>
+              {manualPredictionResult ? (
+                <span
+                  className={`inline-flex w-fit rounded-lg px-3 py-2 text-sm font-semibold ${
+                    manualPredictionResult.isAnomaly
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {manualPredictionResult.isAnomaly ? "Anomaly" : "Normal"}
+                </span>
+              ) : null}
+            </div>
+
+            <form
+              className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
+              onSubmit={handleManualPredictionSubmit}
+            >
+              <ManualPredictionInput
+                id="manual-rpm"
+                label="RPM"
+                value={manualPredictionForm.rpm}
+                onChange={(value) => updateManualPredictionField("rpm", value)}
+                placeholder="1450"
+              />
+              <ManualPredictionInput
+                id="manual-temperature"
+                label="Temperature"
+                value={manualPredictionForm.temperature}
+                onChange={(value) => updateManualPredictionField("temperature", value)}
+                placeholder="67.5"
+              />
+              <ManualPredictionInput
+                id="manual-water-level"
+                label="Water Level"
+                value={manualPredictionForm.waterLevel}
+                onChange={(value) => updateManualPredictionField("waterLevel", value)}
+                placeholder="12.3"
+              />
+              <ManualPredictionInput
+                id="manual-turbine-id"
+                label="Turbine ID (optional)"
+                value={manualPredictionForm.turbineId}
+                onChange={(value) => updateManualPredictionField("turbineId", value)}
+                placeholder="1"
+              />
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={isManualPredictionSubmitting}
+                  className="inline-flex min-h-[42px] w-full items-center justify-center rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 xl:w-auto"
+                >
+                  {isManualPredictionSubmitting ? "Running..." : "Run Prediction"}
+                </button>
+              </div>
+            </form>
+
+            {manualPredictionError ? (
+              <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {manualPredictionError}
+              </div>
+            ) : null}
+
+            {manualPredictionResult ? (
+              <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-slate-950">
+                  Last Manual Prediction Result
+                </h3>
+                <dl className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Predicted Power
+                    </dt>
+                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                      {manualPredictionResult.predictedPowerMw} MW
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Confidence
+                    </dt>
+                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                      {manualPredictionResult.confidence}%
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Anomaly Type
+                    </dt>
+                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                      {manualPredictionResult.anomalyType ?? "N/A"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Timestamp
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {formatPredictionTimestamp(manualPredictionResult.timestamp)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      RPM
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {manualPredictionResult.rpm}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Temperature
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {manualPredictionResult.temperature}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Water Level
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {manualPredictionResult.waterLevel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-normal text-slate-400">
+                      Turbine ID
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {manualPredictionResult.turbineId ?? "N/A"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
           </section>
 
           {exportError ? (

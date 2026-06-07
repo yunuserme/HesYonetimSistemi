@@ -1,6 +1,10 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { getDefaultPathForRole, useAuth } from "../context/AuthContext.jsx";
 
+function normalizeRole(role) {
+  return String(role ?? "").toUpperCase();
+}
+
 export default function ProtectedRoute({ allowedRoles, children }) {
   const { user, isInitializing } = useAuth();
   const location = useLocation();
@@ -19,8 +23,11 @@ export default function ProtectedRoute({ allowedRoles, children }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (allowedRoles?.length && !allowedRoles.includes(user.role)) {
-    return <Navigate to={getDefaultPathForRole(user.role)} replace />;
+  const normalizedRole = normalizeRole(user.role);
+  const normalizedAllowedRoles = allowedRoles?.map(normalizeRole);
+
+  if (normalizedAllowedRoles?.length && !normalizedAllowedRoles.includes(normalizedRole)) {
+    return <Navigate to={getDefaultPathForRole(normalizedRole)} replace />;
   }
 
   return children ?? <Outlet />;

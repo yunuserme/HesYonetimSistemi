@@ -1,5 +1,4 @@
 import { ApiError, apiRequest } from "./apiClient.js";
-import { mockTechnicianWorkOrders } from "../data/mockTechnicianWorkOrders.js";
 
 const statusLabels = {
   OPEN: "Pending",
@@ -38,77 +37,46 @@ export function normalizeWorkOrder(workOrder) {
   };
 }
 
-function getMockWorkOrders() {
-  return mockTechnicianWorkOrders.map(normalizeWorkOrder);
-}
-
 export async function getWorkOrders() {
-  try {
-    const workOrders = await apiRequest("/work-orders/", {
-      auth: true,
-    });
-
-    return {
-      items: workOrders.map(normalizeWorkOrder),
-      source: "api",
-    };
-  } catch (error) {
-    if (error instanceof ApiError && error.status !== 0) {
-      throw error;
-    }
-
-    return {
-      items: getMockWorkOrders(),
-      source: "mock",
-    };
-  }
-}
-
-function updateLocally(workOrder, status) {
-  const backendStatus = backendStatusByUiStatus[status] ?? status;
-  const isCompleted = backendStatus === "COMPLETED";
-
-  return normalizeWorkOrder({
-    ...workOrder,
-    status: backendStatus,
-    closed_at: isCompleted ? new Date().toISOString() : workOrder.closed_at,
+  const workOrders = await apiRequest("/work-orders/", {
+    auth: true,
   });
+
+  if (!Array.isArray(workOrders)) {
+    throw new ApiError("Work orders response format is invalid.", 0, workOrders);
+  }
+
+  return {
+    items: workOrders.map(normalizeWorkOrder),
+  };
 }
 
-async function updateStatus(workOrder, backendStatus, fallbackStatus) {
-  try {
-    const updatedWorkOrder = await apiRequest(`/work-orders/${workOrder.id}`, {
-      method: "PATCH",
-      auth: true,
-      body: {
-        status: backendStatus,
-      },
-    });
+async function updateStatus(workOrder, backendStatus) {
+  const updatedWorkOrder = await apiRequest(`/work-orders/${workOrder.id}`, {
+    method: "PATCH",
+    auth: true,
+    body: {
+      status: backendStatus,
+    },
+  });
 
-    return normalizeWorkOrder(updatedWorkOrder);
-  } catch (error) {
-    if (error instanceof ApiError && error.status !== 0) {
-      throw error;
-    }
-
-    return updateLocally(workOrder, fallbackStatus);
-  }
+  return normalizeWorkOrder(updatedWorkOrder);
 }
 
 export async function acceptWorkOrder(workOrder) {
-  return updateStatus(workOrder, "ACCEPTED", "Accepted");
+  return updateStatus(workOrder, "ACCEPTED");
 }
 
 export async function startWorkOrder(workOrder) {
-  return updateStatus(workOrder, "IN_PROGRESS", "In Progress");
+  return updateStatus(workOrder, "IN_PROGRESS");
 }
 
 export async function completeWorkOrder(workOrder) {
-  return updateStatus(workOrder, "COMPLETED", "Completed");
+  return updateStatus(workOrder, "COMPLETED");
 }
 
 export async function updateWorkOrderStatus(workOrder, status) {
   const backendStatus = backendStatusByUiStatus[status] ?? status;
 
-  return updateStatus(workOrder, backendStatus, status);
+  return updateStatus(workOrder, backendStatus);
 }

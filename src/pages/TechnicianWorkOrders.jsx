@@ -167,7 +167,6 @@ function WorkOrderCard({ workOrder, onError, onUpdate }) {
 export default function TechnicianWorkOrders() {
   const { user } = useAuth();
   const [workOrders, setWorkOrders] = useState([]);
-  const [dataSource, setDataSource] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -186,11 +185,13 @@ export default function TechnicianWorkOrders() {
 
         if (isMounted) {
           setWorkOrders(assignedWorkOrders);
-          setDataSource(result.source);
         }
       } catch (loadError) {
+        console.error("Work orders could not be loaded.", loadError);
+
         if (isMounted) {
           setError(loadError.message || "Work orders could not be loaded.");
+          setWorkOrders([]);
         }
       } finally {
         if (isMounted) {
@@ -251,7 +252,7 @@ export default function TechnicianWorkOrders() {
         </div>
         <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600">
           <Wrench className="h-4 w-4 text-emerald-700" />
-          {dataSource === "api" ? "Live data" : "Offline mode"}
+          Live data
         </div>
       </header>
 
@@ -297,7 +298,7 @@ export default function TechnicianWorkOrders() {
       ) : null}
 
       <section className="space-y-4">
-        {workOrders.length ? (
+        {!error && workOrders.length ? (
           workOrders.map((workOrder) => (
             <WorkOrderCard
               key={workOrder.id}
@@ -306,11 +307,11 @@ export default function TechnicianWorkOrders() {
               onUpdate={handleUpdate}
             />
           ))
-        ) : (
+        ) : !error ? (
           <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500 shadow-soft">
-            No assigned work orders.
+            Atanmis is emri bulunamadi.
           </div>
-        )}
+        ) : null}
       </section>
     </div>
   );

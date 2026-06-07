@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 const ACCESS_TOKEN_KEY = "hes_access_token";
 const REFRESH_TOKEN_KEY = "hes_refresh_token";
@@ -32,6 +32,22 @@ export function setStoredTokens({ accessToken, refreshToken }) {
 export function clearStoredTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+function getErrorMessage(data) {
+  if (typeof data === "object" && data?.detail) {
+    if (Array.isArray(data.detail)) {
+      return data.detail.map((item) => item.msg ?? String(item)).join(" ");
+    }
+
+    return String(data.detail);
+  }
+
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  return "Request failed.";
 }
 
 function buildUrl(path) {
@@ -84,11 +100,11 @@ export async function apiRequest(path, options = {}) {
     : await response.text();
 
   if (!response.ok) {
-    const message = typeof data === "object" && data?.detail
-      ? data.detail
-      : "Request failed.";
+    if (response.status === 401) {
+      clearStoredTokens();
+    }
 
-    throw new ApiError(message, response.status, data);
+    throw new ApiError(getErrorMessage(data), response.status, data);
   }
 
   return data;

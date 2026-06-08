@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ApiError, clearStoredTokens, getStoredTokens, setStoredTokens } from "../services/apiClient.js";
 import {
   clearStoredUser,
-  getStoredUser,
-  isMockToken,
   login,
   logout,
   me,
@@ -47,16 +45,9 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        if (isMockToken(accessToken)) {
-          const storedUser = getStoredUser();
-          if (isMounted) {
-            setUser(storedUser);
-            setAuthSource("mock");
-          }
-          return;
-        }
-
+        // ARTIK DOĞRUDAN GERÇEK VERİTABANINA GİDİYORUZ
         const currentUser = await me();
+        
         if (isMounted) {
           setUser(currentUser);
           setAuthSource("api");
@@ -118,7 +109,9 @@ export function AuthProvider({ children }) {
   async function signOut() {
     const { refreshToken } = getStoredTokens();
     try {
-      await logout(refreshToken);
+      if (refreshToken) {
+        await logout(refreshToken);
+      }
     } finally {
       clearStoredTokens();
       clearStoredUser();
